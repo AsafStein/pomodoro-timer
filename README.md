@@ -11,6 +11,15 @@ npm run dev
 
 האפליקציה עולה בכתובת [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
+כדי לראות את האתר הסטטי כמו בפריסה:
+
+```bash
+npm run build
+npm start
+```
+
+`npm start` מגיש את התיקייה `out` באותה כתובת.
+
 ```bash
 npm test
 npm run lint
@@ -34,3 +43,16 @@ npm run lint
 - מעקב יומי, רצף ימים ושבוע אחרון
 - צליל, רטט במכשירים שתומכים, והתראה בסיום
 - שמירת המסך דלוק בזמן שסשן רץ והאפליקציה פתוחה
+
+## פריסה ב־Cloudflare Pages
+
+האתר סטטי. `npm run build` כותב את כל הקבצים לתיקייה `out`, ומחברים את מאגר GitHub ל־Cloudflare Pages.
+
+בהגדרות הבנייה:
+
+- Framework preset: None, או Next.js (Static HTML Export)
+- Build command: `npm run build`
+- Build output directory: `out`
+- משתנה סביבה `NODE_VERSION`: `22.23.3`
+
+זו הגרסה שבה נבדק הבילד. אותו מספר נמצא בקובץ `.node-version` בשורש, ו־Pages משתמש בו גם אם לא מגדירים את המשתנה ידנית. Next.js 16 צריך Node `20.9.0` ומעלה.

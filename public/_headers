@@ -1,0 +1,21 @@
+# Cloudflare Pages applies this file from the static output.
+# Next.js cannot set response headers when output is "export".
+
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+
+/icon
+  Content-Type: image/png
+
+/apple-icon
+  Content-Type: image/png
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
