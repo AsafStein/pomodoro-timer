@@ -49,6 +49,13 @@ const STATUS: Record<Phase, string> = {
   paused: "מושהה",
 };
 
+const EMPTY_WEEK = Array.from({ length: 7 }, (_, index) => ({
+  key: `empty-${index}`,
+  label: "·",
+  minutes: 0,
+  isToday: false,
+}));
+
 function subscribeOnline(listener: () => void) {
   window.addEventListener("online", listener);
   window.addEventListener("offline", listener);
@@ -187,12 +194,11 @@ export function PomodoroApp() {
 
   const message = storageNote ?? saveProblem;
   const offline = !online;
-  const moment = now ?? Date.now();
-  const todayFocus = sessionsOnDay(state.sessions, moment, "focus");
-  const todayAll = sessionsOnDay(state.sessions, moment);
+  const todayFocus = now == null ? [] : sessionsOnDay(state.sessions, now, "focus");
+  const todayAll = now == null ? [] : sessionsOnDay(state.sessions, now);
   const focusMinutes = todayFocus.reduce((sum, session) => sum + session.durationMs, 0) / 60_000;
-  const streak = focusStreak(state.sessions, moment);
-  const week = weekFocus(state.sessions, moment);
+  const streak = now == null ? 0 : focusStreak(state.sessions, now);
+  const week = now == null ? EMPTY_WEEK : weekFocus(state.sessions, now);
   const weekMax = Math.max(25, ...week.map((day) => day.minutes));
   const goalRatio = Math.min(1, todayFocus.length / state.settings.dailyGoal);
   const minuteMark = Math.ceil(remaining / 60_000);
