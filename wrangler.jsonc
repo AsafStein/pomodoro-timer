@@ -3,6 +3,10 @@
   "name": "pomodoro-timer",
   // Assets only. npm run build writes the Next.js static export to ./out.
   "compatibility_date": "2026-10-19",
+  // Workers Builds hides the Domains & Routes toggle. These flags make
+  // `npx wrangler deploy` enable the public workers.dev URL and preview URLs.
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./out",
     // The export includes 404.html. Unknown paths should 404, not serve index.html.
