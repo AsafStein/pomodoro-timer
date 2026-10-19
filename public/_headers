@@ -1,5 +1,5 @@
-# Cloudflare Pages applies this file from the static output.
-# Next.js cannot set response headers when output is "export".
+# Workers static assets apply this file from out/ (Next copies public/ into out/).
+# The file is not served as a URL. Next.js cannot set response headers when output is "export".
 
 /sw.js
   Content-Type: application/javascript; charset=utf-8

@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pomodoro-timer",
+  // Assets only. npm run build writes the Next.js static export to ./out.
+  "compatibility_date": "2026-10-19",
+  "assets": {
+    "directory": "./out",
+    // The export includes 404.html. Unknown paths should 404, not serve index.html.
+    "not_found_handling": "404-page"
+  }
+}
