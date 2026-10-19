@@ -44,15 +44,17 @@ npm run lint
 - צליל, רטט במכשירים שתומכים, והתראה בסיום
 - שמירת המסך דלוק בזמן שסשן רץ והאפליקציה פתוחה
 
-## פריסה ב־Cloudflare Pages
+## פריסה ב־Cloudflare Workers
 
-האתר סטטי. `npm run build` כותב את כל הקבצים לתיקייה `out`, ומחברים את מאגר GitHub ל־Cloudflare Pages.
+האתר סטטי. `npm run build` כותב את כל הקבצים לתיקייה `out`, ו־Worker מגיש רק את הקבצים האלה, בלי קוד שרת. שם הפרויקט ב־`wrangler.jsonc` הוא `pomodoro-timer`. נתיב שלא קיים מקבל את `404.html`.
 
-בהגדרות הבנייה:
+ב־Workers Builds, תחת Settings > Build:
 
-- Framework preset: None, או Next.js (Static HTML Export)
+- Root directory: `/`
 - Build command: `npm run build`
-- Build output directory: `out`
-- משתנה סביבה `NODE_VERSION`: `22.23.3`
+- Deploy command: `npx wrangler deploy`
+- Build variable `NODE_VERSION`: `22.23.3`
 
-זו הגרסה שבה נבדק הבילד. אותו מספר נמצא בקובץ `.node-version` בשורש, ו־Pages משתמש בו גם אם לא מגדירים את המשתנה ידנית. Next.js 16 צריך Node `20.9.0` ומעלה.
+זו הגרסה שבה נבדק הבילד. אותו מספר נמצא בקובץ `.node-version` בשורש. Next.js 16 צריך Node `20.9.0` ומעלה.
+
+`public/_headers` מועתק ל־`out` בזמן הבילד, ו־Workers מפעיל אותו על הנכסים הסטטיים.
