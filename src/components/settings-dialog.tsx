@@ -172,12 +172,13 @@ export function SettingsDialog({ settings, onChange, onClear }: SettingsDialogPr
 
           <p className="text-xs leading-5 text-muted-foreground">
             כשהמסך נעול, האייפון עשוי להשהות את הדפדפן. הזמן מחושב לפי שעון אמיתי, וכשחוזרים
-            לאפליקציה הסשן שרץ מושלם. סשנים שלא באמת רצו לא נספרים.
+            לאפליקציה הסשן שרץ מושלם. סשנים שלא באמת רצו לא נספרים. איפוס או דילוג באמצע מיקוד
+            שומר את הזמן שכבר עבר על המשימה, בלי לספור פומודורו.
           </p>
 
           {confirmClear ? (
             <div className="flex flex-col gap-2 rounded-xl bg-destructive/10 p-3">
-              <p className="text-sm">למחוק את כל היסטוריית הסשנים? אי אפשר לשחזר.</p>
+              <p className="text-sm">למחוק את כל היסטוריית הסשנים? המשימות יישארו. אי אפשר לשחזר את הזמנים.</p>
               <div className="flex gap-2">
                 <Button
                   type="button"

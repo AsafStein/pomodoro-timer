@@ -18,7 +18,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "ריכוז",
-  description: "פומודורו אישי בעברית. טיימר ריכוז, הפסקות ומעקב יומי, גם מהאייפון.",
+  description: "פומודורו אישי בעברית. טיימר ריכוז, משימות ודוחות זמן, גם מהאייפון.",
   applicationName: "ריכוז",
   appleWebApp: {
     capable: true,

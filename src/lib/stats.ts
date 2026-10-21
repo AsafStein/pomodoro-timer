@@ -27,6 +27,33 @@ export function formatMinutes(totalMinutes: number): string {
   return `${minutes} דקות`;
 }
 
+function formatSeconds(totalSeconds: number): string {
+  if (totalSeconds === 1) return "שנייה";
+  if (totalSeconds === 2) return "שתי שניות";
+  return `${totalSeconds} שניות`;
+}
+
+/** Hours and minutes, or seconds when the span is under a minute. */
+export function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  if (totalSeconds < 60) {
+    if (totalSeconds === 0) return "0 דקות";
+    return formatSeconds(totalSeconds);
+  }
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours === 0) return formatMinutes(minutes);
+  const hoursLabel = hours === 1 ? "שעה" : hours === 2 ? "שעתיים" : `${hours} שעות`;
+  if (minutes === 0) return hoursLabel;
+  return `${hoursLabel} ו־${formatMinutes(minutes)}`;
+}
+
+export function formatPomodoros(count: number): string {
+  if (count <= 0) return "אין פומודורו";
+  if (count === 1) return "פומודורו אחד";
+  return `${count} פומודורו`;
+}
+
 export function formatStreak(days: number): string {
   if (days <= 0) return "אין רצף עדיין";
   if (days === 1) return "רצף של יום אחד";
@@ -40,11 +67,11 @@ export function modeLabel(mode: Mode): string {
   return "הפסקה ארוכה";
 }
 
-export function sessionsOnDay(
-  sessions: FinishedSession[],
+export function sessionsOnDay<T extends FinishedSession>(
+  sessions: T[],
   now: number,
   mode?: Mode,
-): FinishedSession[] {
+): T[] {
   const key = dayKey(now);
   return sessions.filter(
     (session) => dayKey(session.completedAt) === key && (mode == null || session.mode === mode),
