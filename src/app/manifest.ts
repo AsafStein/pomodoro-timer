@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "ריכוז — פומודורו אישי",
     short_name: "ריכוז",
-    description: "טיימר פומודורו אישי לריכוז, הפסקות ומעקב יומי.",
+    description: "טיימר פומודורו אישי לריכוז, משימות ודוחות זמן.",
     start_url: "/",
     scope: "/",
     display: "standalone",

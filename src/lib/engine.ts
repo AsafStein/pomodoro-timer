@@ -21,6 +21,10 @@ export type Engine = {
   remainingMs: number;
   endsAt: number | null;
   cycleCount: number;
+  /** Wall-clock start of the current attempt, kept across pause and resume. */
+  segmentStartedAt: number | null;
+  /** Planned length of the current attempt. Survives a settings change mid-session. */
+  segmentBudgetMs: number | null;
 };
 
 export type FinishedSession = {
@@ -69,7 +73,22 @@ export function createEngine(settings: Settings): Engine {
     remainingMs: durationMs(settings, "focus"),
     endsAt: null,
     cycleCount: 0,
+    segmentStartedAt: null,
+    segmentBudgetMs: null,
   };
+}
+
+/** Focused time in the current attempt, excluding pauses. Idle is always zero. */
+export function elapsedInSegment(engine: Engine, now: number): number {
+  const budget = engine.segmentBudgetMs;
+  if (budget == null || engine.phase === "idle") return 0;
+  const remaining =
+    engine.phase === "paused"
+      ? engine.remainingMs
+      : engine.endsAt == null
+        ? engine.remainingMs
+        : Math.max(0, engine.endsAt - now);
+  return Math.max(0, Math.min(budget, budget - remaining));
 }
 
 export function formatClock(ms: number): string {
@@ -81,10 +100,14 @@ export function formatClock(ms: number): string {
 
 export function start(engine: Engine, now: number): Engine {
   if (engine.phase === "running") return engine;
+  const segmentBudgetMs = engine.segmentBudgetMs ?? engine.remainingMs;
+  const alreadyElapsed = Math.max(0, segmentBudgetMs - engine.remainingMs);
   return {
     ...engine,
     phase: "running",
     endsAt: now + engine.remainingMs,
+    segmentBudgetMs,
+    segmentStartedAt: engine.segmentStartedAt ?? now - alreadyElapsed,
   };
 }
 
@@ -104,6 +127,8 @@ export function reset(engine: Engine, settings: Settings): Engine {
     phase: "idle",
     endsAt: null,
     remainingMs: durationMs(settings, engine.mode),
+    segmentStartedAt: null,
+    segmentBudgetMs: null,
   };
 }
 
@@ -118,6 +143,8 @@ export function selectMode(engine: Engine, settings: Settings, mode: Mode): Engi
     endsAt: null,
     remainingMs: durationMs(settings, mode),
     cycleCount,
+    segmentStartedAt: null,
+    segmentBudgetMs: null,
   };
 }
 
@@ -129,6 +156,8 @@ export function applySettings(engine: Engine, settings: Settings): Engine {
     cycleCount,
     remainingMs: durationMs(settings, engine.mode),
     endsAt: null,
+    segmentStartedAt: null,
+    segmentBudgetMs: null,
   };
 }
 
@@ -192,6 +221,8 @@ function advance(
       remainingMs: running ? remainingMs : dur,
       endsAt: running ? endsAt : null,
       cycleCount,
+      segmentStartedAt: running ? completedAt : null,
+      segmentBudgetMs: running ? dur : null,
     },
   };
 }

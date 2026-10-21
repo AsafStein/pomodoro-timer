@@ -2,8 +2,12 @@
 
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { RotateCcw, SkipForward } from "lucide-react";
+import { AppNav, type AppView } from "@/components/app-nav";
 import { InstallCard, InstallDialog, useInstallState } from "@/components/install-dialog";
+import { ReportsView } from "@/components/reports-view";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { TaskPicker } from "@/components/task-picker";
+import { TasksView } from "@/components/tasks-view";
 import { TimerRing } from "@/components/timer-ring";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +25,9 @@ import {
   setWakeLock,
   unlockAudio,
 } from "@/lib/feedback";
-import { formatMinutes, formatStreak, greeting, modeLabel, sessionsOnDay, weekFocus, focusStreak } from "@/lib/stats";
+import { formatDuration, formatStreak, greeting, modeLabel, sessionsOnDay, weekFocus, focusStreak } from "@/lib/stats";
+import type { WorkSession } from "@/lib/sessions";
+import type { Task } from "@/lib/tasks";
 import { initialState, reduce } from "@/lib/store";
 import {
   bootFromRaw,
@@ -75,6 +81,7 @@ export function PomodoroApp() {
   const [now, setNow] = useState<number | null>(null);
   const allowSave = useRef(false);
   const install = useInstallState();
+  const [view, setView] = useState<AppView>("timer");
   const ready = bootedFrom !== null;
 
   if (raw !== null && bootedFrom === null) {
@@ -139,7 +146,7 @@ export function PomodoroApp() {
     if (Date.now() - notice.at > 15_000) return;
     if (notice.sound) playChime();
     if (notice.notifications) void notify("ריכוז", notice.text);
-    navigator.vibrate?.([30, 40, 30, 40, 80]);
+    if (notice.vibrate !== false) navigator.vibrate?.([30, 40, 30, 40, 80]);
   }, [ready, state.notice]);
 
   useEffect(() => {
@@ -196,11 +203,13 @@ export function PomodoroApp() {
   const offline = !online;
   const todayFocus = now == null ? [] : sessionsOnDay(state.sessions, now, "focus");
   const todayAll = now == null ? [] : sessionsOnDay(state.sessions, now);
-  const focusMinutes = todayFocus.reduce((sum, session) => sum + session.durationMs, 0) / 60_000;
+  const completedToday = todayFocus.filter((session) => !session.partial);
+  const focusMs = todayFocus.reduce((sum, session) => sum + session.durationMs, 0);
   const streak = now == null ? 0 : focusStreak(state.sessions, now);
   const week = now == null ? EMPTY_WEEK : weekFocus(state.sessions, now);
   const weekMax = Math.max(25, ...week.map((day) => day.minutes));
-  const goalRatio = Math.min(1, todayFocus.length / state.settings.dailyGoal);
+  const goalRatio = Math.min(1, completedToday.length / state.settings.dailyGoal);
+  const activeTask = state.tasks.find((task) => task.id === state.activeTaskId) ?? null;
   const minuteMark = Math.ceil(remaining / 60_000);
 
   return (
@@ -208,7 +217,8 @@ export function PomodoroApp() {
       data-mode={engine.mode}
       data-running={engine.phase === "running" ? "true" : "false"}
       aria-busy={!ready}
-      className="relative mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+      data-view={view}
+      className="relative mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-[calc(5.75rem+env(safe-area-inset-bottom))]"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--mode)_24%,transparent),transparent_68%)]" />
       <header className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-background/75 py-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -239,6 +249,45 @@ export function PomodoroApp() {
         </p>
       ) : null}
 
+      {view !== "timer" && state.notice ? (
+        <p className="relative mb-3 text-center text-sm text-[var(--mode)]" role="status">
+          {state.notice.text}
+        </p>
+      ) : null}
+
+      {view !== "timer" && engine.phase === "running" ? (
+        <button
+          type="button"
+          className="relative mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card/80 px-4 py-3 text-start"
+          onClick={() => setView("timer")}
+        >
+          <span className="min-w-0">
+            <span className="block text-xs text-muted-foreground">רץ עכשיו</span>
+            <span className="block truncate text-sm">{activeTask?.name ?? modeLabel(engine.mode)}</span>
+          </span>
+          <span dir="ltr" className="font-display text-2xl tabular-nums">
+            {formatClock(remaining)}
+          </span>
+        </button>
+      ) : null}
+
+      {view === "tasks" ? (
+        <TasksView
+          tasks={state.tasks}
+          sessions={state.sessions}
+          activeTaskId={state.activeTaskId}
+          onCreate={(name) => dispatch({ type: "create-task", name, now: Date.now() })}
+          onRename={(taskId, name) => dispatch({ type: "rename-task", taskId, name })}
+          onArchive={(taskId) => dispatch({ type: "archive-task", taskId, now: Date.now() })}
+          onRestore={(taskId) => dispatch({ type: "restore-task", taskId })}
+          onDelete={(taskId) => dispatch({ type: "delete-task", taskId })}
+          onSelect={(taskId) => dispatch({ type: "select-task", taskId })}
+        />
+      ) : null}
+
+      {view === "reports" ? <ReportsView sessions={state.sessions} tasks={state.tasks} /> : null}
+
+      {view === "timer" ? (
       <div className="relative grid flex-1 gap-8 pb-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-center lg:gap-12">
         <section className="flex flex-col items-center gap-6" aria-label="טיימר">
           <div
@@ -260,13 +309,21 @@ export function PomodoroApp() {
                     "h-11 rounded-full",
                     selected && "bg-[var(--mode)] text-[#1c1612] hover:bg-[var(--mode)]",
                   )}
-                  onClick={() => dispatch({ type: "mode", mode })}
+                  onClick={() => dispatch({ type: "mode", mode, now: Date.now() })}
                 >
                   {MODE_SHORT[mode]}
                 </Button>
               );
             })}
           </div>
+
+          <TaskPicker
+            tasks={state.tasks}
+            activeTaskId={state.activeTaskId}
+            disabled={!ready}
+            onSelect={(taskId) => dispatch({ type: "select-task", taskId })}
+            onCreate={(name) => dispatch({ type: "create-task", name, now: Date.now() })}
+          />
 
           <TimerRing
             remainingMs={remaining}
@@ -314,7 +371,7 @@ export function PomodoroApp() {
                 variant="outline"
                 className="h-11 rounded-full"
                 disabled={!ready || engine.phase === "idle"}
-                onClick={() => dispatch({ type: "reset" })}
+                onClick={() => dispatch({ type: "reset", now: Date.now() })}
               >
                 <RotateCcw />
                 איפוס
@@ -342,23 +399,23 @@ export function PomodoroApp() {
               <div>
                 <h2 className="text-sm text-muted-foreground">היום</h2>
                 <p className="mt-1 text-3xl font-medium tabular-nums">
-                  {todayFocus.length}
+                  {completedToday.length}
                   <span className="text-base text-muted-foreground">/{state.settings.dailyGoal}</span>
                 </p>
               </div>
-              <p className="text-sm text-muted-foreground">{formatMinutes(focusMinutes)} ריכוז</p>
+              <p className="text-sm text-muted-foreground">{formatDuration(focusMs)} ריכוז</p>
             </div>
             <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
               <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${goalRatio * 100}%` }} />
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{formatStreak(streak)}</p>
-            {todayFocus.length >= state.settings.dailyGoal ? (
+            {completedToday.length >= state.settings.dailyGoal ? (
               <p className="mt-1 text-sm text-[var(--focus)]">היעד היומי הושלם</p>
             ) : null}
           </section>
 
           <section className="rounded-3xl border border-border bg-card/80 p-5">
-            <h2 className="text-sm text-muted-foreground">השבוע</h2>
+            <h2 className="text-sm text-muted-foreground">שבעה ימים</h2>
             <div className="mt-4 flex h-24 items-end gap-2">
               {week.map((day) => (
                 <div key={day.key} className="flex flex-1 flex-col items-center gap-2">
@@ -390,9 +447,9 @@ export function PomodoroApp() {
               <ul className="mt-3 flex max-h-52 flex-col gap-2 overflow-y-auto">
                 {todayAll.map((session) => (
                   <li key={session.id} className="flex items-center justify-between gap-3 text-sm">
-                    <span>{modeLabel(session.mode)}</span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {formatMinutes(session.durationMs / 60_000)} ·{" "}
+                    <span className="min-w-0 truncate">{sessionTitle(session, state.tasks)}</span>
+                    <span className="shrink-0 text-muted-foreground tabular-nums">
+                      {formatDuration(session.durationMs)} ·{" "}
                       {new Date(session.completedAt).toLocaleTimeString("he-IL", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -410,6 +467,22 @@ export function PomodoroApp() {
           />
         </aside>
       </div>
+      ) : null}
+      <AppNav
+        view={view}
+        timerHint={
+          view !== "timer" && ready && engine.phase === "running" ? formatClock(remaining) : null
+        }
+        onChange={setView}
+      />
     </div>
   );
+}
+
+function sessionTitle(session: WorkSession, tasks: Task[]): string {
+  const label = session.partial ? "מיקוד חלקי" : modeLabel(session.mode);
+  if (session.mode !== "focus") return label;
+  const task = session.taskId ? tasks.find((item) => item.id === session.taskId) : undefined;
+  const name = task?.name ?? session.taskName;
+  return name ? `${label} · ${name}` : label;
 }
